@@ -18,19 +18,15 @@
 package org.openapitools.codegen.languages;
 
 import org.apache.commons.lang3.StringUtils;
-import org.openapitools.codegen.CliOption;
-import org.openapitools.codegen.CodegenConstants;
-import org.openapitools.codegen.CodegenType;
-import org.openapitools.codegen.SupportingFile;
+import org.openapitools.codegen.*;
 import org.openapitools.codegen.meta.features.*;
+import org.openapitools.codegen.model.ModelMap;
+import org.openapitools.codegen.model.ModelsMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.List;
+import java.util.*;
 
 public class PhpClientCodegen extends AbstractPhpCodegen {
     @SuppressWarnings("hiding")
@@ -135,5 +131,32 @@ public class PhpClientCodegen extends AbstractPhpCodegen {
             supportingFiles.add(new SupportingFile("DebugPlugin.mustache", toSrcPath(invokerPackage, srcBasePath), "DebugPlugin.php"));
         }
 
+    }
+
+    @Override
+    public Map<String, ModelsMap> postProcessAllModels(Map<String, ModelsMap> objs) {
+        Map<String, ModelsMap> result = super.postProcessAllModels(objs);
+
+        for (ModelsMap entry : result.values()) {
+            for (ModelMap mo : entry.getModels()) {
+                CodegenModel cm = mo.getModel();
+                if (cm.discriminator != null && !cm.discriminator.getMappedModels().isEmpty()) {
+                    for (CodegenDiscriminator.MappedModel child : cm.discriminator.getMappedModels()) {
+                        CodegenModel childModel = child.getModel();
+                        String baseName = cm.discriminator.getPropertyBaseName();
+                        childModel.setParentSchema(cm.schemaName);
+                        childModel.setParent(cm.classname);
+                        childModel.setParentModel(cm);
+                        for (CodegenProperty prop : childModel.allVars) {
+                            if (prop.baseName.equals(baseName)) {
+                                prop.discriminatorValue = childModel.classname;
+                                prop.isDiscriminator = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return result;
     }
 }
