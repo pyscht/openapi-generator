@@ -65,6 +65,9 @@ public class GoServerCodegen extends AbstractGoCodegen {
     public GoServerCodegen() {
         super();
 
+        useOneOfInterfaces = true;
+        addOneOfInterfaceImports = true;
+
         modifyFeatureSet(features -> features
                 .includeDocumentationFeatures(DocumentationFeature.Readme)
                 .wireFormatFeatures(EnumSet.of(WireFormatFeature.JSON, WireFormatFeature.XML))
@@ -287,6 +290,37 @@ public class GoServerCodegen extends AbstractGoCodegen {
         supportingFiles.add(new SupportingFile("error.mustache", sourceFolder, "error.go"));
         supportingFiles.add(new SupportingFile("README.mustache", "", "README.md")
                 .doNotOverwrite());
+    }
+
+    @Override
+    public Map<String, ModelsMap> postProcessAllModels(Map<String, ModelsMap> objs) {
+        Map<String, ModelsMap> result = super.postProcessAllModels(objs);
+        HashMap<String, CodegenModel> modelsMap = result.values().stream().map(ModelsMap::getModels).flatMap(List::stream)
+            .map(ModelMap::getModel).collect(HashMap::new, (map, model) -> map.put(model.classname, model), HashMap::putAll);
+
+        Set<String> excludeComplexTypes = new HashSet<String>(){{
+            add("null");
+            add("array");
+        }};
+
+        for (ModelsMap entry : result.values()) {
+            List<ModelMap> models = entry.getModels();
+
+            for (ModelMap mo : models) {
+                CodegenModel cm = mo.getModel();
+
+                for (CodegenProperty prop: cm.vars) {
+                    if (null != prop.complexType && !excludeComplexTypes.contains(prop.complexType)) {
+                        CodegenModel pm = modelsMap.get(prop.complexType);
+                        if (null != pm.discriminator && !pm.discriminator.getMappedModels().isEmpty()) {
+                            prop.setIsAnyType(true);
+                        }
+                    }
+                }
+            }
+        }
+
+        return result;
     }
 
     @Override

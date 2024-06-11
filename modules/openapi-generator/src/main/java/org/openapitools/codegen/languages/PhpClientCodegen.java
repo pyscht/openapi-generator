@@ -140,6 +140,7 @@ public class PhpClientCodegen extends AbstractPhpCodegen {
         for (ModelsMap entry : result.values()) {
             for (ModelMap mo : entry.getModels()) {
                 CodegenModel cm = mo.getModel();
+
                 if (cm.discriminator != null && !cm.discriminator.getMappedModels().isEmpty()) {
                     for (CodegenDiscriminator.MappedModel child : cm.discriminator.getMappedModels()) {
                         CodegenModel childModel = child.getModel();
@@ -147,6 +148,7 @@ public class PhpClientCodegen extends AbstractPhpCodegen {
                         childModel.setParentSchema(cm.schemaName);
                         childModel.setParent(cm.classname);
                         childModel.setParentModel(cm);
+
                         for (CodegenProperty prop : childModel.allVars) {
                             if (prop.baseName.equals(baseName)) {
                                 prop.discriminatorValue = childModel.classname;
@@ -157,6 +159,7 @@ public class PhpClientCodegen extends AbstractPhpCodegen {
                 }
             }
         }
+
         return result;
     }
 }
